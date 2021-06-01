@@ -48,10 +48,10 @@ RM = "C:\Program Files\JetBrains\CLion 2020.2.5\bin\cmake\win\bin\cmake.exe" -E 
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = C:\code\CPrctc\Kursach
+CMAKE_SOURCE_DIR = C:\code\3D\Kursach
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = C:\code\CPrctc\Kursach\cmake-build-debug
+CMAKE_BINARY_DIR = C:\code\3D\Kursach\cmake-build-debug
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -78,14 +78,14 @@ clean: CMakeFiles\Kursach.dir\clean
 CMakeFiles\Kursach.dir\all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Kursach.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\Kursach.dir\depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Kursach.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\Kursach.dir\build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\code\CPrctc\Kursach\cmake-build-debug\CMakeFiles --progress-num=1,2,3,4 "Built target Kursach"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\code\3D\Kursach\cmake-build-debug\CMakeFiles --progress-num=1,2,3,4 "Built target Kursach"
 .PHONY : CMakeFiles\Kursach.dir\all
 
 # Build rule for subdir invocation for target.
 CMakeFiles\Kursach.dir\rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\code\CPrctc\Kursach\cmake-build-debug\CMakeFiles 4
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\code\3D\Kursach\cmake-build-debug\CMakeFiles 4
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 /nologo -$(MAKEFLAGS) CMakeFiles\Kursach.dir\all
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\code\CPrctc\Kursach\cmake-build-debug\CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\code\3D\Kursach\cmake-build-debug\CMakeFiles 0
 .PHONY : CMakeFiles\Kursach.dir\rule
 
 # Convenience name for target.

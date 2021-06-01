@@ -1,6 +1,9 @@
 #include "3D.h"
 #include "vector"
 
+const char* NAME_vt;
+const char* NAME_vn;
+
 uint8_t char_to_digit[256];
 
 struct InternStr {
@@ -37,7 +40,7 @@ enum TokenKind {
     TOKEN_COMMENT,
     TOKEN_VERTEX,
     TOKEN_FACE,
-    TOKEN_C4D_OBJ,
+    TOKEN_OBJECT_NAME,
     // ...
 };
 
@@ -53,6 +56,7 @@ struct Token {
 };
 
 Token token;
+const char* stream_start;
 const char* stream;
 
 void fatal(const char* fmt, ...) {
@@ -125,18 +129,16 @@ void next_token() {
             stream = num_start;
             if (c == '.') {
                 scan_float();
-                token.float_val = token.float_val;
             } else {
                 scan_int();
-                if (negative){
-                    if(token.kind == TOKEN_FLOAT){
-                        token.float_val = -token.float_val;
-                    }else if(token.kind == TOKEN_INT){
-                        token.int_val = ~(token.int_val -1);
-                    }
+            }
+            if (negative){
+                if(token.kind == TOKEN_FLOAT){
+                    token.float_val = -token.float_val;
+                }else if(token.kind == TOKEN_INT){
+                    token.int_val = ~(token.int_val -1);
                 }
             }
-
             break;
         }
     case 'a': case 'b': case 'c': case 'd':case 'e': case 'f':case 'g': case 'h':case 'i':case 'j':
@@ -156,15 +158,24 @@ void next_token() {
         if ((stream - token.start) == 1){
             if(token.name[0] == 'v'){
                 token.kind = TOKEN_VERTEX;
+                goto end;
             }else if(token.name[0] == 'f'){
                 token.kind = TOKEN_FACE;
+                goto end;
             }else if(token.name[0] == 'o'){
-                while (*stream != '\n') {
-                    stream++;
-                }
-                token.kind = TOKEN_C4D_OBJ;
+                token.kind = TOKEN_OBJECT_NAME;
+                goto ignore_line;
             }
+        }else if(token.name == NAME_vn || token.name == NAME_vt){
+                goto ignore_line;
+        }else{
+            goto end;
         }
+        ignore_line:
+        while (*stream != '\n') {
+            stream++;
+        }
+        end:
 
         break;
     }
@@ -183,7 +194,7 @@ void next_token() {
 }
 
 void init_stream(const char* str) {
-    stream = str;
+    stream_start = stream = str;
     char_to_digit['0'] = 0;
     char_to_digit['1'] = 1;
     char_to_digit['2'] = 2;
@@ -194,6 +205,10 @@ void init_stream(const char* str) {
     char_to_digit['7'] = 7;
     char_to_digit['8'] = 8;
     char_to_digit['9'] = 9;
+
+    NAME_vt = str_intern("vt");
+    NAME_vn = str_intern("vn");
+
     next_token();
 }
 
@@ -220,19 +235,6 @@ inline bool is_token(TokenKind kind){
     return token.kind == kind;
 }
 
-inline bool is_token_name(const char* name){
-    return TOKEN_NAME && token.name == name;
-}
-
-inline bool match_token(TokenKind kind){
-    if(is_token(kind)){
-        next_token();
-        return true;
-    } else{
-        return false;
-    }
-}
-
 inline bool expect_token(TokenKind kind){
     if(is_token(kind)){
         next_token();
@@ -251,9 +253,9 @@ bool parse_vertex(){
     next_token();
     expect_token(TokenKind(' '));
     if(is_token(TOKEN_FLOAT)){
-        vertex.x = token.float_val*100;
+        vertex.x = token.float_val;
     }else if(is_token(TOKEN_INT)){
-        vertex.x = token.int_val*100;
+        vertex.x = token.int_val;
     }else{
         fatal("unexpected token");
     }
@@ -261,9 +263,9 @@ bool parse_vertex(){
     next_token();
     expect_token(TokenKind(' '));
     if(is_token(TOKEN_FLOAT)){
-        vertex.y = token.float_val*100;
+        vertex.y = token.float_val;
     }else if(is_token(TOKEN_INT)){
-        vertex.y = token.int_val*100;
+        vertex.y = token.int_val;
     }else{
         fatal("unexpected token");
     }
@@ -271,9 +273,9 @@ bool parse_vertex(){
     next_token();
     expect_token(TokenKind(' '));
     if(is_token(TOKEN_FLOAT)){
-        vertex.z = token.float_val*100;
+        vertex.z = token.float_val;
     }else if(is_token(TOKEN_INT)){
-        vertex.z = token.int_val*100;
+        vertex.z = token.int_val;
     }else{
         fatal("unexpected token");
     }
@@ -290,7 +292,7 @@ bool parse_vertex(){
 bool parse_edge(){
     next_token();
     int count = 0;
-    while(token.kind != '\n'){
+    while(token.kind != '\n' && *(stream+1) !='\0'){
         expect_token(TokenKind(' '));
         if (is_token(TOKEN_INT)){
             indexes.push_back(token.int_val-1);
@@ -299,6 +301,11 @@ bool parse_edge(){
             fatal("unexpected token");
         }
         next_token();
+        if(is_token(TokenKind('/'))){
+            while(token.kind != TokenKind(' ') && token.kind != TokenKind('\n') && *(stream+1) !='\0'){
+                next_token();
+            }
+        }
     }
     edge.vertices_count = count;
 
@@ -339,7 +346,8 @@ Object* parse_obj(FILE* file){
         }
     }
     Object* obj = new Object;
-    obj->set_heap(HeapCreate(HEAP_GENERATE_EXCEPTIONS,0,0));
+    size_t object_size = vertexes.size()*sizeof(POINT3)+vertexes.size()*sizeof(POINT)+edges.size()*sizeof(Edge);
+    obj->set_heap(HeapCreate(HEAP_GENERATE_EXCEPTIONS,object_size,0));
 
     POINT3* WPT = (POINT3*)HeapAlloc(obj->heap(),HEAP_GENERATE_EXCEPTIONS,vertexes.size()*sizeof(POINT3));
     POINT* SPT = (POINT*)HeapAlloc(obj->heap(),HEAP_GENERATE_EXCEPTIONS,vertexes.size()*sizeof(POINT));
@@ -356,6 +364,8 @@ Object* parse_obj(FILE* file){
         offset+=_edges[i].vertices_count;
         _edges[i].vertices_count--;
     }
+
+
 
     *obj = Object(obj->heap(),WPT,SPT,_edges,vertexes.size(),edges.size());
     return obj;

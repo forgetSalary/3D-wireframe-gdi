@@ -1,155 +1,24 @@
 #include "obj_parser.cpp"
+#include "thread"
+#include "atomic"
 
-template <typename T>
-struct Matrix {
-    T** data;
-    size_t size_a;
-    size_t size_b;
+#define ATM(T) std::atomic<T>
 
-    T* operator[](int index) { return data[index]; }
-};
+POINT3 SphericalCoords::to_cartesian() {
+    if (phi == 0){
+        return PointEx(0,0,Round(r.radius));
+    }
 
-double static inline DegreeToRad(double Angle) {
-    return (((double)Angle * PI) / 180);
+    double sin_phi = sin(DegreeToRad(phi.angle));
+    double sin_theta = sin(DegreeToRad(phi.angle));
+    double cos_phi = cos(DegreeToRad(phi.angle));
+    double cos_theta = cos(DegreeToRad(phi.angle));
+    return PointEx(Round(r.radius * sin_theta * cos_phi), Round(r.radius * sin_theta * sin_phi), Round(r.radius * cos_theta));
 }
 
-double static inline Abs(double X) {
-    return (X < 0 ? -X : X);
-}
-
-void CreatePyramid(POINT3* WPT,Edge* edges, POINT3 surface_centre, int height, int edge_len, int edges_count) {
-    // generating screen_vertices
-    WPT[0] = surface_centre;
-    WPT[0].z += height;
-
-    WPT[1].x = 0;
-    WPT[1].y = edge_len;
-    WPT[1].z = surface_centre.z;
-
-    double segment_angle_rad = DegreeToRad(360 / edges_count);
-    double cos_a = cos(segment_angle_rad);
-    double sin_a = sin(segment_angle_rad);
-
-    for (size_t i = 2; i < edges_count + 1; i++) {
-        WPT[i] = PointEx(Round(WPT[i - 1].x * cos_a - WPT[i - 1].y * sin_a),
-                         Round(WPT[i - 1].x * sin_a + WPT[i - 1].y * cos_a),
-                         surface_centre.z);
-    }
-
-    for (size_t i = 1; i < edges_count + 1; i++) {
-        WPT[i].x += surface_centre.x;
-        WPT[i].y += surface_centre.y;
-    }
-
-
-    //generating Edge
-    for (int i = 0; i < edges_count; ++i){
-        edges[0].order[i] = i+1;
-    }
-    edges[0].order[edges_count] = 1;
-
-    for (int i = 1; i < edges_count+1; ++i) {
-        edges[i].order[0] = 0;
-        edges[i].order[1] = i;
-    }
-}
-
-void ObjectRotateX(POINT3* points, int count, double deg) {
-    int M1[4];
-
-    double A = DegreeToRad(deg);
-
-    double sin_A = sin(A);
-    double cos_A = cos(A);
-
-    double M2[4][4] = { {1,0    ,0      ,0},
-                        {0,cos_A,-sin_A, 0},
-                        {0,sin_A,cos_A,  0},
-                        {0,0    ,0      ,1} };
-    int M3[4];
-    int S = 0;
-
-    //Умножаю вектор на матрицу
-    for (size_t i = 0; i < count; i++) {
-        M1[0] = points[i].x;
-        M1[1] = points[i].y;
-        M1[2] = points[i].z;
-        M1[3] = 1;
-
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-                S = S + Round(M1[j] * (double)M2[i][j]);
-            M3[i] = S; S = 0;
-        }
-        points[i] = PointEx(M3[0], M3[1], M3[2]);
-    }
-}
-void ObjectRotateY(POINT3* points, int count, double deg) {
-    int M1[4];
-    double A = DegreeToRad(deg);
-
-    double sin_A = sin(A);
-    double cos_A = cos(A);
-
-    double M2[4][4] = { {cos_A, 0,sin_A,0},
-                        {0,     1,0    ,0},
-                        {-sin_A,0,cos_A,0},
-                        {0,     0,0    ,1} };
-
-    int M3[4];
-    int S = 0;
-
-    for (size_t i = 0; i < count; i++) {
-        M1[0] = points[i].x;
-        M1[1] = points[i].y;
-        M1[2] = points[i].z;
-        M1[3] = 1;
-
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-                S = S + Round(M1[j] * (double)M2[i][j]);
-            M3[i] = S; S = 0;
-        }
-        points[i] = PointEx(M3[0], M3[1], M3[2]);
-    }
-}
-void ObjectRotateZ(POINT3* points, int count, double deg) {
-    int M1[4];
-
-    double A = DegreeToRad(deg);
-
-    double sin_A = sin(A);
-    double cos_A = cos(A);
-
-    double M2[4][4] = { {cos_A,-sin_A,0,0},
-                        {sin_A,cos_A, 0,0},
-                        {0,    0,     1,0},
-                        {0,    0,     0,1} };
-    int M3[4];
-    int S = 0;
-
-    //Умножаю вектор на матрицу
-    for (size_t i = 0; i < count; i++) {
-        M1[0] = points[i].x;
-        M1[1] = points[i].y;
-        M1[2] = points[i].z;
-        M1[3] = 1;
-
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-                S = S + Round(M1[j] * (double)M2[i][j]);
-            M3[i] = S; S = 0;
-        }
-        points[i] = PointEx(M3[0], M3[1], M3[2]);
-    }
-}
-
-POINT3 GlobalPointToScreen(POINT3 world_point, double A, double B, int R) {
-    A = DegreeToRad(A);
-    B = DegreeToRad(B);
+static POINT3 GlobalPointToScreen(POINT3 world_point, SphericalCoords C) {
+    double A = DegreeToRad(C.phi.angle);
+    double B = DegreeToRad(C.theta.angle);
 
     double sin_A = sin(A);
     double sin_B = sin(B);
@@ -158,44 +27,138 @@ POINT3 GlobalPointToScreen(POINT3 world_point, double A, double B, int R) {
 
     double X = world_point.x, Y= world_point.y, Z= world_point.z;
 
-    int M3[3] = {Round(Y*cos_A - X*sin_A),
-                 Round(Z*sin_B - X*cos_A*cos_B - Y*sin_A*cos_B),
-                 Round(-X*cos_A*cos_B - Y*sin_A*sin_B - Z*cos_B + R)};
+    double M3[3] = {Y*cos_A - X*sin_A,
+                    Z*sin_B - X*cos_A*cos_B - Y*sin_A*cos_B,
+                    -X*cos_A*cos_B - Y*sin_A*sin_B - Z*cos_B + C.r.radius};
 
-    POINT3 res = PointEx(M3[0], M3[1], M3[2]);
-    return res;
+    return PointEx(M3[0], M3[1], M3[2]);
 }
 
-POINT Perspective(POINT3 PT, double d) {
-    int x = d*((double)PT.x);
-    int y = d*((double)PT.y);
+static POINT Perspective(POINT3 PT, Camera& cam, double dc){
+    double sin_X = sin(DegreeToRad(cam.orientation.x));
+    double sin_Y = sin(DegreeToRad(cam.orientation.y));
+    double sin_Z = sin(DegreeToRad(cam.orientation.z));
+    double cos_X = cos(DegreeToRad(cam.orientation.x));
+    double cos_Y = cos(DegreeToRad(cam.orientation.y));
+    double cos_Z = cos(DegreeToRad(cam.orientation.z));
 
-    return Point(x, y);
+    double X = PT.x,Y = PT.y, Z = PT.z;
+
+    POINT3 d = PointEx(cos_Y*(sin_Z*Y + cos_Z*X) - sin_Y*Z,
+                       sin_X*(cos_Y*Z + sin_Y*(sin_Z*Y + cos_Z*X)) + cos_X*(cos_Z*Y - sin_Z*X),
+                       cos_X*(cos_Y*Z + sin_Y*(sin_Z*Y + cos_Z*X)) - sin_X*(cos_Z*Y - sin_Z*X));
+
+    POINT projection = Point(Round((d.x)/(d.z)*dc),
+                             Round((d.y)/(d.z)*dc));
+    return projection;
 }
 
-POINT ToScreenPoint(POINT PT, int w_height, int w_width){
+static inline POINT ScreenPoint(POINT PT, int w_height, int w_width){
     return Point(PT.x + w_width/2,-PT.y + w_height/2);
 }
 
-void Object::update(ViewPoint &vp, int w_height, int w_width) {
+void Object::update(Camera& cam, double dc,int w_height, int w_width) {
     for (int i = 0; i < vertices_count; ++i) {
-        screen_points[i] = ToScreenPoint(Perspective(GlobalPointToScreen(
-                world_points[i], vp.A, vp.B, vp.R), vp.d), w_height, w_width);
+        POINT3 EPT = GlobalPointToScreen(world_points[i],cam.center_position);
+        screen_points[i] = ScreenPoint(Perspective(EPT,cam,dc),w_height,w_width);
     }
 }
 
-void Object::draw(HDC hdc) {
+void Object::draw(HDC hdc,COLORREF color) {
+    SelectObject(hdc,CreatePen(PS_SOLID,0,color));
+
     POINT p1,p2;
     for (int i = 0; i < edges_count; ++i) {
-        for (int j = 0; j < edges[i].vertices_count; ++j) {
-            p1 = screen_points[edges[i].order[j]];
-            p2 = screen_points[edges[i].order[j+1]];
-            MoveToEx(hdc,p1.x,p1.y, nullptr);
+        p1 = screen_points[edges[i].order[0]];
+        MoveToEx(hdc,p1.x,p1.y, nullptr);
+        for (int j = 1; j < edges[i].vertices_count; ++j) {
+            p2 = screen_points[edges[i].order[j]];
             LineTo(hdc,p2.x,p2.y);
         }
-//        p1 = screen_points[edges[i].order[edges[i].vertices_count]];
-//        p2 = screen_points[edges[i].order[0]];
-//        MoveToEx(hdc,p1.x,p1.y, nullptr);
-//        LineTo(hdc,p2.x,p2.y);
+        LineTo(hdc,p1.x,p1.y);
     }
+}
+
+void draw_ground(HDC hdc,Camera& cam, double dc,int w_height, int w_width){
+    SelectObject(hdc,CreatePen(PS_SOLID,0,RGB(156, 156, 156)));
+
+    int range[2] = {-150,150};
+    int step = 5;
+    int lines_count = (-range[0]+range[1])/step;
+
+    POINT p1,p2;
+    //vertical
+    for (int i = 0; i < lines_count; ++i) {
+        p1 = ScreenPoint(
+                Perspective(
+                        GlobalPointToScreen(
+                                PointEx(range[0]+step*i,range[0],0),cam.center_position),
+                                cam,dc),w_height,w_width);
+
+        p2 = ScreenPoint(
+                Perspective(
+                        GlobalPointToScreen(
+                                PointEx(range[0]+step*i,range[1],0),cam.center_position),
+                        cam,dc),w_height,w_width);
+
+        MoveToEx(hdc,p1.x,p1.y, nullptr);
+        LineTo(hdc,p2.x,p2.y);
+    }
+
+    //horizontal
+    for (int i = 0; i < lines_count; ++i) {
+        p1 = ScreenPoint(
+                Perspective(
+                        GlobalPointToScreen(
+                                PointEx(range[0],range[0]+step*i,0),cam.center_position),
+                        cam,
+                        dc),
+                w_height,
+                w_width);
+
+        p2 = ScreenPoint(
+                Perspective(
+                        GlobalPointToScreen(
+                                PointEx(range[1],range[0]+step*i,0),cam.center_position),
+                        cam,
+                        dc),
+                w_height,
+                w_width);
+
+        MoveToEx(hdc,p1.x,p1.y, nullptr);
+        LineTo(hdc,p2.x,p2.y);
+    }
+}
+
+void draw_coordinate_lines(HDC hdc, Camera& cam, double dc, int w_height, int w_width){
+    int len = 100;
+
+    POINT p1,p2;
+    p1 = ScreenPoint(Perspective(GlobalPointToScreen(
+                            PointEx(0,0,0),cam.center_position),
+                    cam,dc),w_height,w_width);
+
+    //x
+    SelectObject(hdc,CreatePen(PS_SOLID,1,RGB(255, 0, 0)));
+    p2 = ScreenPoint(Perspective(GlobalPointToScreen(
+                            PointEx(len,0,0),cam.center_position),
+                    cam,dc),w_height,w_width);
+    MoveToEx(hdc,p1.x,p1.y,NULL);
+    LineTo(hdc,p2.x,p2.y);
+
+    //y
+    SelectObject(hdc,CreatePen(PS_SOLID,1,RGB(0, 0, 255)));
+    p2 = ScreenPoint(Perspective(GlobalPointToScreen(
+            PointEx(0,len,0),cam.center_position),
+                                 cam,dc),w_height,w_width);
+    MoveToEx(hdc,p1.x,p1.y,NULL);
+    LineTo(hdc,p2.x,p2.y);
+
+    //z
+    SelectObject(hdc,CreatePen(PS_SOLID,1,RGB(0, 255, 0)));
+    p2 = ScreenPoint(Perspective(GlobalPointToScreen(
+            PointEx(0,0,len),cam.center_position),
+                                 cam,dc),w_height,w_width);
+    MoveToEx(hdc,p1.x,p1.y,NULL);
+    LineTo(hdc,p2.x,p2.y);
 }

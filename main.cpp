@@ -3,12 +3,17 @@
 #include "resource.h"
 #include "3D.h"
 
-int ScreenWidth;   //Разрешение экрана по вертикали
-int ScreenHeight;  //Разрешение экрана по горизонтали
+int ScreenWidth = GetSystemMetrics(SM_CXSCREEN)/1.5;   //Разрешение экрана по вертикали
+int ScreenHeight = GetSystemMetrics(SM_CYSCREEN)/1.5;  //Разрешение экрана по горизонтали
 
 double window_size = 1;
 
-ViewPoint viewPoint = {500,270,90};
+Camera main_camera = {{600, -180, 90},
+                    {0,0,0}};
+
+
+double dc = 1000;//distance from screen to camera centre
+
 Object* main_object = NULL;
 
 #define MAX_LOADSTRING 100
@@ -18,10 +23,8 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int WINAPI WinMain(HINSTANCE currentInstance, HINSTANCE previousInstance, PSTR cmdLine, INT cmdCount){
-    ScreenWidth = GetSystemMetrics(SM_CXSCREEN)/2;
-    ScreenHeight = GetSystemMetrics(SM_CYSCREEN)/2;
 
-    FILE* obj = fopen("./Konus.obj","r");
+    FILE* obj = fopen("./Figure.obj","r");
     main_object = parse_obj(obj);
 
     // Register the window class
@@ -59,15 +62,13 @@ int WINAPI WinMain(HINSTANCE currentInstance, HINSTANCE previousInstance, PSTR c
     return 0;
 }
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
     int wmId, wmEvent;
     PAINTSTRUCT ps;
-    HDC hdc;
+    HDC hdc,hdc1;
 
     const double RotateAngle = 1;
 
-    viewPoint.d = viewPoint.R/500;
 
     switch (message)
     {
@@ -91,25 +92,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (wParam)
         {
-        case 'A':
-            viewPoint.A += RotateAngle;
-            InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
-            break;
-        case 'D':
-            viewPoint.A -= RotateAngle;
-            InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
-            break;
         case 'W':
-            viewPoint.B += RotateAngle;
+            main_camera.center_position.theta += RotateAngle;
             InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
             break;
         case 'S':
-            viewPoint.B -= RotateAngle;
+            main_camera.center_position.theta -= RotateAngle;
             InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
+            break;
+        case 'A':
+            main_camera.center_position.phi += RotateAngle;
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case 'D':
+            main_camera.center_position.phi -= RotateAngle;
+            InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 'X': {
             window_size *= 1.5;
@@ -146,34 +143,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         }
         case 'R':
-            viewPoint.R += viewPoint.R/5;
+            dc *= 2;
             InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
             break;
         case 'T':
-            viewPoint.R -= viewPoint.R/5;
+            dc /= 2;
             InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
             break;
         case 'F':
-            viewPoint.d += viewPoint.d/5;
+            main_camera.center_position.r /= 2;
             InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
             break;
         case 'G':
-            viewPoint.d -= viewPoint.d/5;
+            main_camera.center_position.r *= 2;
             InvalidateRect(hWnd, NULL, TRUE);
-            UpdateWindow(hWnd);
             break;
         }
     } break;
-    case WM_PAINT:
+    case WM_PAINT:{
         hdc = BeginPaint(hWnd, &ps);
-        main_object->update(viewPoint,ScreenHeight,ScreenWidth);
-        main_object->draw(hdc);
+
+        main_object->update(main_camera,dc,ScreenHeight,ScreenWidth);
+        draw_ground(hdc,main_camera,dc,ScreenHeight,ScreenWidth);
+        draw_coordinate_lines(hdc, main_camera, dc, ScreenHeight, ScreenWidth);
+        main_object->draw(hdc,0);
 
         EndPaint(hWnd, &ps);
         break;
+    }
     case WM_DESTROY:
         PostQuitMessage(0);
         break;

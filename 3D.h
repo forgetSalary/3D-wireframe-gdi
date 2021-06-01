@@ -6,18 +6,17 @@
 
 #define PI ((double)3.14159265359)
 
-struct POINT3
-{
-    int x;
-    int y;
-    int z;
+struct POINT3{
+    double x;
+    double y;
+    double z;
 };
 
 inline POINT Point(int x, int y){
     return { x,y };
 }
 
-inline POINT3 PointEx(int x, int y, int z) {
+inline POINT3 PointEx(double x, double y, double z) {
     return { x,y,z };
 }
 
@@ -26,11 +25,81 @@ inline int Round(double x){
     return (int)x;
 }
 
-struct ViewPoint{
-    double R; //Расстояние от точки наблюдения до начала мировой системы координат
-    double A;
-    double B;
-    double d; //Расстояние от точки наблюдения до экранной плоскости
+double static inline DegreeToRad(double Angle) {
+    return (((double)Angle * PI) / 180);
+}
+
+#define ANGLE_UPPER_LIMIT(deg) ((deg) < 360 ? (deg) : (deg)-360)
+#define ANGLE_LOWER_LIMIT(deg) ((deg) > 0 ? (deg) : (deg)+360)
+
+struct Radius{
+    double radius;
+
+    inline double operator =(double r){
+        radius = (r > 0 ? r : 0);
+        return radius;
+    }
+
+    inline void operator +=(double r){
+        radius += r;
+    }
+    inline void operator -=(double r){
+        radius = (radius-r > 0 ? radius-r : 0);
+    }
+    inline void operator *=(double r){
+        radius *= r;
+    }
+    inline void operator /=(double r){
+        radius /= r;
+    }
+    inline bool operator ==(double r){
+        return radius == r;
+    }
+    inline bool operator !=(double r){
+        return radius != r;
+    }
+};
+
+struct Angle{
+    double angle;
+
+    void operator +=(double deg){
+        angle = ANGLE_UPPER_LIMIT(angle+deg);
+    }
+    void operator -=(double deg){
+        angle = ANGLE_LOWER_LIMIT(angle-deg);
+    }
+    void operator *=(double deg){
+        angle = ANGLE_UPPER_LIMIT(angle*deg);
+    }
+    void operator /=(double deg){
+        angle /= deg;
+    }
+    inline bool operator ==(double deg){
+        return angle == deg;
+    }
+    inline bool operator !=(double deg){
+        return angle != deg;
+    }
+};
+
+struct SphericalCoords{
+    Radius r;
+    Angle  phi;
+    Angle  theta;
+
+    POINT3 to_cartesian();
+};
+
+struct TaitBryanAngles{
+    double x;
+    double y;
+    double z;
+};
+
+struct Camera{
+    SphericalCoords center_position;
+    TaitBryanAngles orientation;
 };
 
 struct Edge{
@@ -39,6 +108,7 @@ struct Edge{
 };
 
 class Object{
+private:
     HANDLE _heap;
     POINT3* world_points;
     POINT* screen_points;
@@ -62,24 +132,14 @@ public:
         this->edges_count = edges_count;
         this->vertices_count = vertices_count;
     }
-    void update(ViewPoint& vp, int w_height, int w_width);
-    void draw(HDC hdc);
+    void update(Camera& cam, double dc, int w_height, int w_width);
+    void draw(HDC hdc,COLORREF color);
     HANDLE heap(){return _heap;}
     void set_heap(HANDLE heap){_heap = heap;}
 };
 
-POINT3 GlobalPointToScreen(POINT3 World_Point, double Angle_Horizontal, double Angle_Vertical, int R);
-POINT Perspective(POINT3 PT, double d);
-POINT ToScreenPoint(POINT PT, int w_height, int w_width);
-
-void CreatePyramid(POINT3* WPT,
-                   Edge* edges,
-                   POINT3 surface_centre,
-                   int height,
-                   int edge_len,
-                   int edges_count);
-
-void DrawPiramid(HDC hdc, POINT* PT, int COUNT);
+void draw_ground(HDC hdc,Camera& cam, double dc,int w_height, int w_width);
+void draw_coordinate_lines(HDC hdc, Camera& cam, double dc, int w_height, int w_width);
 
 Object* parse_obj(FILE* file);
 

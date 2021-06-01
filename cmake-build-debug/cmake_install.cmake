@@ -1,4 +1,4 @@
-# Install script for directory: C:/code/CPrctc/Kursach
+# Install script for directory: C:/code/3D/Kursach
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -40,5 +40,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "C:/code/CPrctc/Kursach/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "C:/code/3D/Kursach/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
