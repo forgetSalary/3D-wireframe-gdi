@@ -1,40 +1,10 @@
 #include "3D.h"
 #include "vector"
 
-const char* NAME_vt;
-const char* NAME_vn;
-
-uint8_t char_to_digit[256];
-
-struct InternStr {
-    const char* str;
-    size_t len;
-};
-
-arena_t str_pool = EMPTY_ARENA;
-std::vector<InternStr> interns;
-
-const char* str_intern_range(const char* start, const char* end){
-    size_t len = end - start;
-
-    for (size_t i = 0; i < interns.size(); ++i) {
-        if (interns[i].len = len && strncmp(interns[i].str, start, len) == 0){
-            return interns[i].str;
-        }
-    }
-    char* str = (char*)arena_alloc(&str_pool,len+1);
-    memcpy(str,start,len);
-    str[len] = 0;
-    interns.push_back({str,len});
-    return str;
-}
-
-const char *str_intern(const char* str){
-    return str_intern_range(str,str+strlen(str));
-}
+uint8_t char_to_digit[256] = {0};
 
 enum TokenKind {
-    TOKEN_FLOAT = 128,
+    TOKEN_FLOAT = 128,//0-128 reserved for symbols
     TOKEN_INT,
     TOKEN_NAME,
     TOKEN_COMMENT,
@@ -51,7 +21,6 @@ struct Token {
     union {
         double float_val;
         uint32_t int_val;
-        const char* name;
     };
 };
 
@@ -153,20 +122,19 @@ void next_token() {
             stream++;
         }
         token.kind = TOKEN_NAME;
-        token.name = str_intern_range(token.start,stream);
 
         if ((stream - token.start) == 1){
-            if(token.name[0] == 'v'){
+            if(token.start[0] == 'v'){
                 token.kind = TOKEN_VERTEX;
                 goto end;
-            }else if(token.name[0] == 'f'){
+            }else if(token.start[0] == 'f'){
                 token.kind = TOKEN_FACE;
                 goto end;
-            }else if(token.name[0] == 'o'){
+            }else if(token.start[0] == 'o'){
                 token.kind = TOKEN_OBJECT_NAME;
                 goto ignore_line;
             }
-        }else if(token.name == NAME_vn || token.name == NAME_vt){
+        }else if(!strncmp(token.start,"vt",2) || !strncmp(token.start,"vn",2)){
                 goto ignore_line;
         }else{
             goto end;
@@ -205,9 +173,6 @@ void init_stream(const char* str) {
     char_to_digit['7'] = 7;
     char_to_digit['8'] = 8;
     char_to_digit['9'] = 9;
-
-    NAME_vt = str_intern("vt");
-    NAME_vn = str_intern("vn");
 
     next_token();
 }
@@ -317,7 +282,13 @@ bool parse_edge(){
     }
 }
 
-Object* parse_obj(FILE* file){
+Object* parse_obj(arena_t* arena,const char* fname){
+    FILE* file = fopen(fname,"r");
+
+    if(!file){
+        exit(5);
+    }
+
     init_stream_from_file(file);
 
     std::vector<POINT3> vertexes;
@@ -345,19 +316,17 @@ Object* parse_obj(FILE* file){
                 break;
         }
     }
-    Object* obj = new Object;
-    size_t object_size = vertexes.size()*sizeof(POINT3)+vertexes.size()*sizeof(POINT)+edges.size()*sizeof(Edge);
-    obj->set_heap(HeapCreate(HEAP_GENERATE_EXCEPTIONS,object_size,0));
+    Object* obj = (Object*)arena_alloc(arena,sizeof(Object));
 
-    POINT3* WPT = (POINT3*)HeapAlloc(obj->heap(),HEAP_GENERATE_EXCEPTIONS,vertexes.size()*sizeof(POINT3));
-    POINT* SPT = (POINT*)HeapAlloc(obj->heap(),HEAP_GENERATE_EXCEPTIONS,vertexes.size()*sizeof(POINT));
-    Edge* _edges = (Edge*)HeapAlloc(obj->heap(),HEAP_GENERATE_EXCEPTIONS,edges.size()*sizeof(Edge));
+    POINT3* WPT = (POINT3*)arena_alloc(arena,vertexes.size()*sizeof(POINT3));
+    POINT* SPT = (POINT*)arena_alloc(arena,vertexes.size()*sizeof(POINT));
+    Edge* _edges = (Edge*)arena_alloc(arena,edges.size()*sizeof(Edge));
     memcpy(WPT,vertexes.data(),vertexes.size()*sizeof(POINT3));
     memcpy(_edges,edges.data(),edges.size()*sizeof(Edge));
 
     int offset = 0;
     for (int i = 0; i < edges.size(); ++i) {
-        _edges[i].order = (uint32_t*)HeapAlloc(obj->heap(),HEAP_GENERATE_EXCEPTIONS,sizeof(uint32_t)*_edges[i].vertices_count);
+        _edges[i].order = (uint32_t*)arena_alloc(arena,sizeof(uint32_t)*_edges[i].vertices_count);
         for (int j = 0; j < _edges[i].vertices_count; ++j) {
             _edges[i].order[j] = indexes[j+offset];
         }
@@ -365,8 +334,8 @@ Object* parse_obj(FILE* file){
         _edges[i].vertices_count--;
     }
 
+    free((void*)stream_start);
 
-
-    *obj = Object(obj->heap(),WPT,SPT,_edges,vertexes.size(),edges.size());
+    *obj = Object(WPT,SPT,_edges,vertexes.size(),edges.size());
     return obj;
 }

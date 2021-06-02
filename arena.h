@@ -19,7 +19,7 @@ struct arena_t{
     ptr_list regions;
 };
 
-#define ARENA_ALIGNMENT 8
+#define ARENA_ALIGNMENT sizeof(uintptr_t)
 #define ARENA_BLOCK_SIZE 4096
 
 //операции над списками

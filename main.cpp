@@ -1,20 +1,24 @@
-﻿#include "framework.h"
-
-#include "resource.h"
+﻿#include "resource.h"
 #include "3D.h"
 
-int ScreenWidth = GetSystemMetrics(SM_CXSCREEN)/1.5;   //Разрешение экрана по вертикали
-int ScreenHeight = GetSystemMetrics(SM_CYSCREEN)/1.5;  //Разрешение экрана по горизонтали
+namespace env{
+    int ScreenWidth = GetSystemMetrics(SM_CXSCREEN)/1.5;   //Разрешение экрана по вертикали
+    int ScreenHeight = GetSystemMetrics(SM_CYSCREEN)/1.5;  //Разрешение экрана по горизонтали
 
-double window_size = 1;
+    double window_size = 1;
 
-Camera main_camera = {{600, -180, 90},
-                    {0,0,0}};
+    Camera main_camera = {{600, -180, 90},
+                          {0,0,0},
+                          {0,0}};
 
 
-double dc = 1000;//distance from screen to camera centre
+    double dc = 1000;//distance from screen to camera centre
 
-Object* main_object = NULL;
+    arena_t objects_arena = EMPTY_ARENA;
+    Object* main_object = NULL;
+}
+
+using namespace env;
 
 #define MAX_LOADSTRING 100
 HINSTANCE hInst;
@@ -24,8 +28,10 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int WINAPI WinMain(HINSTANCE currentInstance, HINSTANCE previousInstance, PSTR cmdLine, INT cmdCount){
 
-    FILE* obj = fopen("./Figure.obj","r");
-    main_object = parse_obj(obj);
+    main_object = parse_obj(&objects_arena,"./ice.obj");
+
+    AllocConsole();
+    freopen("CONOUT$", "w", stdout);
 
     // Register the window class
     const char *CLASS_NAME = "myWin32WindowClass";
@@ -67,8 +73,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
     PAINTSTRUCT ps;
     HDC hdc,hdc1;
 
-    const double RotateAngle = 1;
 
+    const double RotateAngle = 1;
 
     switch (message)
     {
@@ -142,6 +148,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
             UpdateWindow(hWnd);
             break;
         }
+        case VK_UP:
+            main_camera.offsets.y -= 10;
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case VK_DOWN:
+            main_camera.offsets.y += 10;
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case VK_LEFT:
+            main_camera.offsets.x -= 10;
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case VK_RIGHT:
+            main_camera.offsets.x += 10;
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+
         case 'R':
             dc *= 2;
             InvalidateRect(hWnd, NULL, TRUE);

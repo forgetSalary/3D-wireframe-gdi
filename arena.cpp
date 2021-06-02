@@ -2,16 +2,15 @@
 
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
 
-#define BLOCK_PADDING (ALIGN_UP(sizeof(ptr_node), ARENA_ALIGNMENT))
+#define BLOCK_PADDING (sizeof(ptr_node))
 
 static void arena_grow(arena_t* arena, size_t min_size) {
-    size_t padding = BLOCK_PADDING;
-    size_t size = ALIGN_UP(MAX(ARENA_BLOCK_SIZE+padding, min_size+padding), ARENA_ALIGNMENT);
+    size_t size = ALIGN_UP(MAX(ARENA_BLOCK_SIZE+BLOCK_PADDING, min_size+BLOCK_PADDING), ARENA_ALIGNMENT);
     arena->ptr = (char*)malloc(size);
     memset(arena->ptr,0,ARENA_BLOCK_SIZE);
     arena->end = arena->ptr + size;
     list_append(&(arena->regions), (ptr_node*)arena->ptr);
-    arena->ptr += padding;
+    arena->ptr = (char*)ALIGN_UP_PTR(arena->ptr + BLOCK_PADDING, ARENA_ALIGNMENT);
 }
 
 void *arena_alloc(arena_t* arena, size_t size) {

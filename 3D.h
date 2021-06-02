@@ -100,6 +100,7 @@ struct TaitBryanAngles{
 struct Camera{
     SphericalCoords center_position;
     TaitBryanAngles orientation;
+    POINT offsets;
 };
 
 struct Edge{
@@ -109,7 +110,6 @@ struct Edge{
 
 class Object{
 private:
-    HANDLE _heap;
     POINT3* world_points;
     POINT* screen_points;
     Edge* edges;
@@ -117,15 +117,13 @@ private:
     uint32_t vertices_count;
 public:
     Object(){
-        _heap = NULL;
         world_points = nullptr;
         screen_points = nullptr;
         edges = nullptr;
         edges_count = 0;
         vertices_count = 0;
     }
-    Object(HANDLE heap,POINT3* world_points,POINT* screen_points, Edge* edges,uint32_t vertices_count, uint32_t edges_count){
-        this->_heap = heap;
+    Object(POINT3* world_points,POINT* screen_points, Edge* edges,uint32_t vertices_count, uint32_t edges_count){
         this->world_points = world_points;
         this->screen_points = screen_points;
         this->edges = edges;
@@ -134,13 +132,11 @@ public:
     }
     void update(Camera& cam, double dc, int w_height, int w_width);
     void draw(HDC hdc,COLORREF color);
-    HANDLE heap(){return _heap;}
-    void set_heap(HANDLE heap){_heap = heap;}
 };
 
 void draw_ground(HDC hdc,Camera& cam, double dc,int w_height, int w_width);
 void draw_coordinate_lines(HDC hdc, Camera& cam, double dc, int w_height, int w_width);
 
-Object* parse_obj(FILE* file);
+Object* parse_obj(arena_t* arena,const char* fname);
 
 #endif FUNCTIONS_H
