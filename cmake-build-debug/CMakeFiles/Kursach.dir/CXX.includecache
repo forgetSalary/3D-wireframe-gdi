@@ -9,10 +9,6 @@
 C:/code/3D/Kursach/3D.cpp
 obj_parser.cpp
 C:/code/3D/Kursach/obj_parser.cpp
-thread
-C:/code/3D/Kursach/thread
-atomic
-C:/code/3D/Kursach/atomic
 
 C:/code/3D/Kursach/3D.h
 framework.h
@@ -46,9 +42,19 @@ math.h
 windows.h
 -
 
+C:/code/3D/Kursach/main.cpp
+resource.h
+C:/code/3D/Kursach/resource.h
+3D.h
+C:/code/3D/Kursach/3D.h
+
 C:/code/3D/Kursach/obj_parser.cpp
 3D.h
 C:/code/3D/Kursach/3D.h
 vector
 C:/code/3D/Kursach/vector
+conio.h
+C:/code/3D/Kursach/conio.h
+
+C:/code/3D/Kursach/resource.h
 

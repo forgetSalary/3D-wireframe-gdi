@@ -27,11 +27,12 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int WINAPI WinMain(HINSTANCE currentInstance, HINSTANCE previousInstance, PSTR cmdLine, INT cmdCount){
-
-    main_object = parse_obj(&objects_arena,"./ice.obj");
-
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
+
+    printf("Importing object...\n");
+    main_object = parse_obj(&objects_arena,"./ice.obj");
+    printf("Object has been imported\n\n");
 
     // Register the window class
     const char *CLASS_NAME = "myWin32WindowClass";
@@ -72,7 +73,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
     int wmId, wmEvent;
     PAINTSTRUCT ps;
     HDC hdc,hdc1;
-
 
     const double RotateAngle = 1;
 
@@ -146,6 +146,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
             );
             InvalidateRect(hWnd, NULL, TRUE);
             UpdateWindow(hWnd);
+            break;
+        }
+
+        case VK_F5:{
+            printf("Camera phi angle:%f\n",main_camera.center_position.phi);
+            printf("Camera theta angle:%f\n",main_camera.center_position.theta);
+            printf("Camera distance to center:%f\n",main_camera.center_position.r);
+            TaitBryanAngles C = main_camera.orientation;
+            printf("Camera orientation:%f,%f,%f\n",C.x,C.y,C.z);
+            printf("Distance to screen:%f\n\n",dc);
             break;
         }
         case VK_UP:

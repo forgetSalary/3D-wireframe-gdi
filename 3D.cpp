@@ -1,8 +1,4 @@
 #include "obj_parser.cpp"
-#include "thread"
-#include "atomic"
-
-#define ATM(T) std::atomic<T>
 
 POINT3 SphericalCoords::to_cartesian() {
     if (phi == 0){
@@ -16,9 +12,10 @@ POINT3 SphericalCoords::to_cartesian() {
     return PointEx(Round(r.radius * sin_theta * cos_phi), Round(r.radius * sin_theta * sin_phi), Round(r.radius * cos_theta));
 }
 
-static POINT3 GlobalPointToScreen(POINT3 world_point, SphericalCoords C) {
-    double A = DegreeToRad(C.phi.angle);
-    double B = DegreeToRad(C.theta.angle);
+static POINT RenderPoint(POINT3 world_point,Camera cam,double dc, int w_height, int w_width ){
+    //view transformation:
+    double A = DegreeToRad(cam.center_position.phi.angle);
+    double B = DegreeToRad(cam.center_position.theta.angle);
 
     double sin_A = sin(A);
     double sin_B = sin(B);
@@ -29,12 +26,11 @@ static POINT3 GlobalPointToScreen(POINT3 world_point, SphericalCoords C) {
 
     double M3[3] = {Y*cos_A - X*sin_A,
                     Z*sin_B - X*cos_A*cos_B - Y*sin_A*cos_B,
-                    -X*cos_A*cos_B - Y*sin_A*sin_B - Z*cos_B + C.r.radius};
+                    -X*cos_A*cos_B - Y*sin_A*sin_B - Z*cos_B + cam.center_position.r.radius};
 
-    return PointEx(M3[0], M3[1], M3[2]);
-}
+    POINT3 screen_dot = PointEx(M3[0], M3[1], M3[2]);
 
-static POINT Perspective(POINT3 PT, Camera& cam, double dc){
+    //perspective:
     double sin_X = sin(DegreeToRad(cam.orientation.x));
     double sin_Y = sin(DegreeToRad(cam.orientation.y));
     double sin_Z = sin(DegreeToRad(cam.orientation.z));
@@ -42,25 +38,23 @@ static POINT Perspective(POINT3 PT, Camera& cam, double dc){
     double cos_Y = cos(DegreeToRad(cam.orientation.y));
     double cos_Z = cos(DegreeToRad(cam.orientation.z));
 
-    double X = PT.x,Y = PT.y, Z = PT.z;
+    X = screen_dot.x,Y = screen_dot.y, Z = screen_dot.z;
 
     POINT3 d = PointEx(cos_Y*(sin_Z*Y + cos_Z*X) - sin_Y*Z,
                        sin_X*(cos_Y*Z + sin_Y*(sin_Z*Y + cos_Z*X)) + cos_X*(cos_Z*Y - sin_Z*X),
                        cos_X*(cos_Y*Z + sin_Y*(sin_Z*Y + cos_Z*X)) - sin_X*(cos_Z*Y - sin_Z*X));
 
-    POINT projection = Point(Round((d.x)/(d.z)*dc),
-                             Round((d.y)/(d.z)*dc));
-    return projection;
+    POINT projected = Point(Round((d.x)/(d.z)*dc),
+                            Round((d.y)/(d.z)*dc));
+
+    //screen transformation
+    return Point(projected.x + w_width/2 + cam.offsets.x,-projected.y + w_height/1.5 + cam.offsets.y);
 }
 
-static inline POINT ScreenPoint(POINT PT,Camera cam, int w_height, int w_width){
-    return Point(PT.x + w_width/2 + cam.offsets.x,-PT.y + w_height/1.5 + cam.offsets.y);
-}
 
 void Object::update(Camera& cam, double dc,int w_height, int w_width) {
     for (int i = 0; i < vertices_count; ++i) {
-        POINT3 EPT = GlobalPointToScreen(world_points[i],cam.center_position);
-        screen_points[i] = ScreenPoint(Perspective(EPT,cam,dc),cam,w_height,w_width);
+        screen_points[i] = RenderPoint(world_points[i],cam,dc,w_height,w_width);
     }
 }
 
@@ -78,28 +72,19 @@ void Object::draw(HDC hdc,COLORREF color) {
         LineTo(hdc,p1.x,p1.y);
     }
 }
-
+#define REDERED(x,y,z) RenderPoint(PointEx(x,y,z),cam,dc,w_height,w_width)
 void draw_ground(HDC hdc,Camera& cam, double dc,int w_height, int w_width){
     SelectObject(hdc,CreatePen(PS_SOLID,0,RGB(156, 156, 156)));
 
     int range[2] = {-150,150};
-    int step = 1;
+    int step = 5;
     int lines_count = (-range[0]+range[1])/step;
 
     POINT p1,p2;
     //vertical
     for (int i = 0; i < lines_count; ++i) {
-        p1 = ScreenPoint(
-                Perspective(
-                        GlobalPointToScreen(
-                                PointEx(range[0]+step*i,range[0],0),cam.center_position),
-                                cam,dc),cam,w_height,w_width);
-
-        p2 = ScreenPoint(
-                Perspective(
-                        GlobalPointToScreen(
-                                PointEx(range[0]+step*i,range[1],0),cam.center_position),
-                        cam,dc),cam,w_height,w_width);
+        p1 = REDERED(range[0] + step * i, range[0], 0);
+        p2 = REDERED(range[0] + step * i, range[1], 0);
 
         MoveToEx(hdc,p1.x,p1.y, nullptr);
         LineTo(hdc,p2.x,p2.y);
@@ -107,19 +92,8 @@ void draw_ground(HDC hdc,Camera& cam, double dc,int w_height, int w_width){
 
     //horizontal
     for (int i = 0; i < lines_count; ++i) {
-        p1 = ScreenPoint(
-                Perspective(
-                        GlobalPointToScreen(
-                                PointEx(range[0],range[0]+step*i,0),cam.center_position),
-                        cam,
-                        dc),cam, w_height,w_width);
-
-        p2 = ScreenPoint(
-                Perspective(
-                        GlobalPointToScreen(
-                                PointEx(range[1],range[0]+step*i,0),cam.center_position),
-                        cam,
-                        dc),cam,w_height,w_width);
+        p1 = REDERED(range[0], range[0] + step * i, 0);
+        p2 = REDERED(range[1], range[0] + step * i, 0);
 
         MoveToEx(hdc,p1.x,p1.y, nullptr);
         LineTo(hdc,p2.x,p2.y);
@@ -130,31 +104,24 @@ void draw_coordinate_lines(HDC hdc, Camera& cam, double dc, int w_height, int w_
     int len = 100;
 
     POINT p1,p2;
-    p1 = ScreenPoint(Perspective(GlobalPointToScreen(
-                            PointEx(0,0,0),cam.center_position),
-                    cam,dc),cam,w_height,w_width);
+    p1 = REDERED(0, 0, 0);
 
     //x
     SelectObject(hdc,CreatePen(PS_SOLID,1,RGB(255, 0, 0)));
-    p2 = ScreenPoint(Perspective(GlobalPointToScreen(
-                            PointEx(len,0,0),cam.center_position),
-                    cam,dc),cam,w_height,w_width);
+    p2 = REDERED(len,0,0);
+
     MoveToEx(hdc,p1.x,p1.y,NULL);
     LineTo(hdc,p2.x,p2.y);
 
     //y
     SelectObject(hdc,CreatePen(PS_SOLID,1,RGB(0, 0, 255)));
-    p2 = ScreenPoint(Perspective(GlobalPointToScreen(
-            PointEx(0,len,0),cam.center_position),
-                                 cam,dc),cam,w_height,w_width);
+    p2 = REDERED(0,len,0);
     MoveToEx(hdc,p1.x,p1.y,NULL);
     LineTo(hdc,p2.x,p2.y);
 
     //z
     SelectObject(hdc,CreatePen(PS_SOLID,1,RGB(0, 255, 0)));
-    p2 = ScreenPoint(Perspective(GlobalPointToScreen(
-            PointEx(0,0,len),cam.center_position),
-                                 cam,dc),cam,w_height,w_width);
+    p2 = REDERED(0,0,len);
     MoveToEx(hdc,p1.x,p1.y,NULL);
     LineTo(hdc,p2.x,p2.y);
 }

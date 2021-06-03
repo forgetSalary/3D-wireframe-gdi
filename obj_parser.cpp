@@ -1,5 +1,6 @@
 #include "3D.h"
 #include "vector"
+#include "conio.h"
 
 uint8_t char_to_digit[256] = {0};
 
@@ -286,6 +287,8 @@ Object* parse_obj(arena_t* arena,const char* fname){
     FILE* file = fopen(fname,"r");
 
     if(!file){
+        printf("Error while loading file\n");
+        _getch();
         exit(5);
     }
 

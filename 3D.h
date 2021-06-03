@@ -25,7 +25,7 @@ inline int Round(double x){
     return (int)x;
 }
 
-double static inline DegreeToRad(double Angle) {
+inline double DegreeToRad(double Angle) {
     return (((double)Angle * PI) / 180);
 }
 
