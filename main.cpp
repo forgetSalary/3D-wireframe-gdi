@@ -7,12 +7,9 @@ namespace env{
 
     double window_size = 1;
 
-    Camera main_camera = {{600, -180, 90},
+    Camera main_camera = {{600, 273, 84},
                           {0,0,0},
-                          {0,0}};
-
-
-    double dc = 1000;//distance from screen to camera centre
+                          {0,0},1000};
 
     arena_t objects_arena = EMPTY_ARENA;
     Object* main_object = NULL;
@@ -32,7 +29,6 @@ int WINAPI WinMain(HINSTANCE currentInstance, HINSTANCE previousInstance, PSTR c
 
     printf("Importing object...\n");
     main_object = parse_obj(&objects_arena,"./ice.obj");
-    printf("Object has been imported\n\n");
 
     // Register the window class
     const char *CLASS_NAME = "myWin32WindowClass";
@@ -45,10 +41,10 @@ int WINAPI WinMain(HINSTANCE currentInstance, HINSTANCE previousInstance, PSTR c
     RegisterClass(&wc);
 
     // Create the window
-    CreateWindow(CLASS_NAME, "3D",
+    CreateWindow(CLASS_NAME, "3D Wireframe Model Visualisation",
                  WS_OVERLAPPEDWINDOW | WS_VISIBLE,            // Window style
                  CW_USEDEFAULT, CW_USEDEFAULT,                // Window initial position
-                 ScreenWidth, ScreenHeight,                                    // Window size
+                 ScreenWidth, ScreenHeight,                   // Window size
                  nullptr, nullptr, nullptr, nullptr);
 
 
@@ -148,14 +144,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
             UpdateWindow(hWnd);
             break;
         }
-
         case VK_F5:{
-            printf("Camera phi angle:%f\n",main_camera.center_position.phi);
-            printf("Camera theta angle:%f\n",main_camera.center_position.theta);
-            printf("Camera distance to center:%f\n",main_camera.center_position.r);
-            TaitBryanAngles C = main_camera.orientation;
-            printf("Camera orientation:%f,%f,%f\n",C.x,C.y,C.z);
-            printf("Distance to screen:%f\n\n",dc);
+            main_camera.log(stdout);
             break;
         }
         case VK_UP:
@@ -176,19 +166,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
             break;
 
         case 'R':
-            dc *= 2;
+            main_camera.dc *= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 'T':
-            dc /= 2;
+            main_camera.dc /= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 'F':
-            main_camera.center_position.r /= 2;
+            main_camera.center_position.r /= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 'G':
-            main_camera.center_position.r *= 2;
+            main_camera.center_position.r *= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         }
@@ -196,9 +186,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
     case WM_PAINT:{
         hdc = BeginPaint(hWnd, &ps);
 
-        main_object->update(main_camera,dc,ScreenHeight,ScreenWidth);
-        draw_ground(hdc,main_camera,dc,ScreenHeight,ScreenWidth);
-        draw_coordinate_lines(hdc, main_camera, dc, ScreenHeight, ScreenWidth);
+        main_object->update(main_camera,ScreenHeight,ScreenWidth);
+        draw_ground(hdc,main_camera,ScreenHeight,ScreenWidth);
+        draw_coordinate_lines(hdc, main_camera, ScreenHeight, ScreenWidth);
         main_object->draw(hdc,0);
 
         EndPaint(hWnd, &ps);

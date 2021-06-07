@@ -17,6 +17,11 @@ struct arena_t{
     char *ptr;
     char *end;
     ptr_list regions;
+    struct{
+        uint64_t default_regions_count;
+        uint64_t large_regions_count;
+        size_t large_regions_size;
+    }stat;
 };
 
 #define ARENA_ALIGNMENT sizeof(uintptr_t)
@@ -34,12 +39,14 @@ struct arena_t{
 #define ALIGN_DOWN_PTR(p, a) ((void *)ALIGN_DOWN((uintptr_t)(p), (a)))
 #define ALIGN_UP_PTR(p, a) ((void *)ALIGN_UP((uintptr_t)(p), (a)))
 
-#define EMPTY_ARENA  {NULL,NULL,{NULL,NULL}}
+#define EMPTY_ARENA  {NULL,NULL,{NULL,NULL},{0,0,0}}
 
 void *arena_alloc(arena_t* arena, size_t size);
 
 void arena_free(arena_t* arena);
 
 void* arena_dup(arena_t* arena,void* src,size_t size);
+
+void arena_log(FILE* stream,arena_t* arena);
 
 #endif //ALLOCS_ARENA_H

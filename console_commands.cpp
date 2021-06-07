@@ -1,5 +1,4 @@
 #include "stdio.h"
-#include "assert.h"
 #include "string"
 
 //tokens:
@@ -22,8 +21,8 @@ enum rotate_dir{
 
 enum command_kind{
     rotate,
-    move_camera,
-    zoom_camera
+    move,
+    zoom
 };
 
 struct command{
@@ -37,7 +36,7 @@ struct command{
     };
 };
 
-void read_command(command* cm_struct,const char* command,size_t len){
+void read_command(command* cm_struct,const char* command){
     std::string format;
     format = command;
 
@@ -62,8 +61,31 @@ void read_command(command* cm_struct,const char* command,size_t len){
             cm_struct->rotate.dir = theta;
         }
 
-        assert(rotate_dir == std::string::npos);
-
-
+        printf("Unknown command\n");
     }
+    token_index = format.find(TOKEN_ZOOM,0);
+    if (token_index != std::string::npos){
+        cm_struct->kind = zoom;
+
+        int rotate_dir = std::string::npos;
+        rotate_dir = format.find(,token_index);
+        if(rotate_dir != std::string::npos){
+            cm_struct->rotate.dir = phi;
+        }
+        rotate_dir = format.find(TOKEN_R_LEFT,token_index);
+        if(rotate_dir != std::string::npos){
+            cm_struct->rotate.dir = phi;
+        }
+        rotate_dir = format.find(TOKEN_R_DOWN,token_index);
+        if(rotate_dir != std::string::npos){
+            cm_struct->rotate.dir = theta;
+        }rotate_dir = format.find(TOKEN_R_UP,token_index);
+        if(rotate_dir != std::string::npos){
+            cm_struct->rotate.dir = theta;
+        }
+
+        printf("Unknown command\n");
+    }
+
+
 }

@@ -33,53 +33,53 @@ inline double DegreeToRad(double Angle) {
 #define ANGLE_LOWER_LIMIT(deg) ((deg) > 0 ? (deg) : (deg)+360)
 
 struct Radius{
-    double radius;
+    double value;
 
     inline double operator =(double r){
-        radius = (r > 0 ? r : 0);
-        return radius;
+        value = (r > 0 ? r : 0);
+        return value;
     }
 
     inline void operator +=(double r){
-        radius += r;
+        value += r;
     }
     inline void operator -=(double r){
-        radius = (radius-r > 0 ? radius-r : 0);
+        value = (value - r > 0 ? value - r : 0);
     }
     inline void operator *=(double r){
-        radius *= r;
+        value *= r;
     }
     inline void operator /=(double r){
-        radius /= r;
+        value /= r;
     }
     inline bool operator ==(double r){
-        return radius == r;
+        return value == r;
     }
     inline bool operator !=(double r){
-        return radius != r;
+        return value != r;
     }
 };
 
 struct Angle{
-    double angle;
+    double value;
 
     void operator +=(double deg){
-        angle = ANGLE_UPPER_LIMIT(angle+deg);
+        value = ANGLE_UPPER_LIMIT(value + deg);
     }
     void operator -=(double deg){
-        angle = ANGLE_LOWER_LIMIT(angle-deg);
+        value = ANGLE_LOWER_LIMIT(value - deg);
     }
     void operator *=(double deg){
-        angle = ANGLE_UPPER_LIMIT(angle*deg);
+        value = ANGLE_UPPER_LIMIT(value * deg);
     }
     void operator /=(double deg){
-        angle /= deg;
+        value /= deg;
     }
     inline bool operator ==(double deg){
-        return angle == deg;
+        return value == deg;
     }
     inline bool operator !=(double deg){
-        return angle != deg;
+        return value != deg;
     }
 };
 
@@ -92,18 +92,28 @@ struct SphericalCoords{
 };
 
 struct TaitBryanAngles{
-    double x;
-    double y;
-    double z;
+    Angle x;
+    Angle y;
+    Angle z;
 };
 
 struct Camera{
     SphericalCoords center_position;
     TaitBryanAngles orientation;
     POINT offsets;
+    double dc = 1000;//distance from screen to camera centre
+
+    void log(FILE* stream){
+        fprintf(stream,"Camera phi angle:\t\t%f\n",center_position.phi.value);
+        fprintf(stream,"Camera theta angle:\t\t%f\n",center_position.theta.value);
+        fprintf(stream,"Camera distance to center:\t%f\n",center_position.r.value);
+        TaitBryanAngles C = orientation;
+        fprintf(stream,"Camera orientation:\t\t%f,%f,%f\n",C.x,C.y,C.z);
+        fprintf(stream,"Distance from camera to screen:\t%f\n\n",dc);
+    }
 };
 
-struct Edge{
+struct Face{
     uint32_t* order;
     uint32_t vertices_count;
 };
@@ -112,30 +122,30 @@ class Object{
 private:
     POINT3* world_points;
     POINT* screen_points;
-    Edge* edges;
+    Face* faces;
     uint32_t edges_count;
     uint32_t vertices_count;
 public:
     Object(){
         world_points = nullptr;
         screen_points = nullptr;
-        edges = nullptr;
+        faces = nullptr;
         edges_count = 0;
         vertices_count = 0;
     }
-    Object(POINT3* world_points,POINT* screen_points, Edge* edges,uint32_t vertices_count, uint32_t edges_count){
+    Object(POINT3* world_points, POINT* screen_points, Face* edges, uint32_t vertices_count, uint32_t edges_count){
         this->world_points = world_points;
         this->screen_points = screen_points;
-        this->edges = edges;
+        this->faces = edges;
         this->edges_count = edges_count;
         this->vertices_count = vertices_count;
     }
-    void update(Camera& cam, double dc, int w_height, int w_width);
+    void update(Camera& cam, int w_height, int w_width);
     void draw(HDC hdc,COLORREF color);
 };
 
-void draw_ground(HDC hdc,Camera& cam, double dc,int w_height, int w_width);
-void draw_coordinate_lines(HDC hdc, Camera& cam, double dc, int w_height, int w_width);
+void draw_ground(HDC hdc,Camera& cam,int w_height, int w_width);
+void draw_coordinate_lines(HDC hdc, Camera& cam, int w_height, int w_width);
 
 Object* parse_obj(arena_t* arena,const char* fname);
 

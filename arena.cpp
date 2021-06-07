@@ -6,6 +6,12 @@
 
 static void arena_grow(arena_t* arena, size_t min_size) {
     size_t size = ALIGN_UP(MAX(ARENA_BLOCK_SIZE+BLOCK_PADDING, min_size+BLOCK_PADDING), ARENA_ALIGNMENT);
+    if(min_size <= ARENA_BLOCK_SIZE){
+        arena->stat.default_regions_count ++;
+    }else{
+        arena->stat.large_regions_count ++;
+        arena->stat.large_regions_size+=size;
+    }
     arena->ptr = (char*)malloc(size);
     memset(arena->ptr,0,ARENA_BLOCK_SIZE);
     arena->end = arena->ptr + size;
@@ -43,4 +49,13 @@ void arena_free(arena_t* arena) {
     arena->end = NULL;
     arena->regions.head = NULL;
     arena->regions.tail = NULL;
+}
+
+void arena_log(FILE* stream,arena_t* arena){
+    fprintf(stream,"Arena default blocks:\t%llu\n"
+                           "Arena large blocks:\t%llu\n"
+                           "Memory used:\t\t%llu bytes\n\n",
+            arena->stat.default_regions_count,
+            arena->stat.large_regions_count,
+            arena->stat.default_regions_count*ARENA_BLOCK_SIZE+arena->stat.large_regions_size);
 }

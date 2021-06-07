@@ -179,7 +179,7 @@ void init_stream(const char* str) {
 }
 
 void init_stream_from_file(FILE* from){
-    size_t grow_size = 1024;
+    size_t grow_size = 512;
     char* buffer = (char*)malloc(grow_size);
     int len = 0,grow_len = 0;
 
@@ -212,10 +212,10 @@ inline bool expect_token(TokenKind kind){
 }
 
 POINT3 vertex;
-Edge edge;
+Face face;
 std::vector<uint32_t> indexes;
 
-bool parse_vertex(){
+static bool parse_vertex(){
     next_token();
     expect_token(TokenKind(' '));
     if(is_token(TOKEN_FLOAT)){
@@ -255,7 +255,7 @@ bool parse_vertex(){
     }
 }
 
-bool parse_edge(){
+static bool parse_face(){
     next_token();
     int count = 0;
     while(token.kind != '\n' && *(stream+1) !='\0'){
@@ -273,7 +273,7 @@ bool parse_edge(){
             }
         }
     }
-    edge.vertices_count = count;
+    face.vertices_count = count;
 
     next_token();
     if (is_token(TOKEN_FACE)){
@@ -287,7 +287,7 @@ Object* parse_obj(arena_t* arena,const char* fname){
     FILE* file = fopen(fname,"r");
 
     if(!file){
-        printf("Error while loading file\n");
+        printf("File not found\n");
         _getch();
         exit(5);
     }
@@ -295,7 +295,7 @@ Object* parse_obj(arena_t* arena,const char* fname){
     init_stream_from_file(file);
 
     std::vector<POINT3> vertexes;
-    std::vector<Edge> edges;
+    std::vector<Face> faces;
 
     bool last = false;
     while(!is_token(TokenKind('\0'))) {
@@ -309,8 +309,8 @@ Object* parse_obj(arena_t* arena,const char* fname){
                 break;
             case TOKEN_FACE:
                 while(!last){
-                    last = parse_edge();
-                    edges.push_back(edge);
+                    last = parse_face();
+                    faces.push_back(face);
                 }
                 last = false;
                 break;
@@ -321,14 +321,18 @@ Object* parse_obj(arena_t* arena,const char* fname){
     }
     Object* obj = (Object*)arena_alloc(arena,sizeof(Object));
 
-    POINT3* WPT = (POINT3*)arena_alloc(arena,vertexes.size()*sizeof(POINT3));
+    POINT3* WPT = (POINT3*)arena_dup(arena,vertexes.data(),vertexes.size()*sizeof(POINT3));
     POINT* SPT = (POINT*)arena_alloc(arena,vertexes.size()*sizeof(POINT));
-    Edge* _edges = (Edge*)arena_alloc(arena,edges.size()*sizeof(Edge));
-    memcpy(WPT,vertexes.data(),vertexes.size()*sizeof(POINT3));
-    memcpy(_edges,edges.data(),edges.size()*sizeof(Edge));
+    Face* _edges = (Face*)arena_dup(arena,faces.data(), faces.size() * sizeof(Face));
+
+    size_t object_size = sizeof(Object)+
+                         sizeof(POINT3)*vertexes.size()+
+                         sizeof(POINT)*vertexes.size()+
+                         sizeof(Face)*faces.size()+
+                         sizeof(uint32_t)*indexes.size();
 
     int offset = 0;
-    for (int i = 0; i < edges.size(); ++i) {
+    for (int i = 0; i < faces.size(); ++i) {
         _edges[i].order = (uint32_t*)arena_alloc(arena,sizeof(uint32_t)*_edges[i].vertices_count);
         for (int j = 0; j < _edges[i].vertices_count; ++j) {
             _edges[i].order[j] = indexes[j+offset];
@@ -338,7 +342,11 @@ Object* parse_obj(arena_t* arena,const char* fname){
     }
 
     free((void*)stream_start);
+    *obj = Object(WPT, SPT, _edges, vertexes.size(), faces.size());
 
-    *obj = Object(WPT,SPT,_edges,vertexes.size(),edges.size());
+    printf("Object has been imported\nVertexes:\t%d\nFaces:\t\t%d\nMemory used:\t%u bytes\n\n",
+           vertexes.size(), faces.size(), object_size);
+    arena_log(stdout,arena);
+
     return obj;
 }
