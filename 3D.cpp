@@ -25,8 +25,8 @@ static POINT RenderPoint(POINT3 world_point,Camera cam, int w_height, int w_widt
     double X = world_point.x, Y= world_point.y, Z= world_point.z;
 
     double screen_dot[3] = {Y*cos_A - X*sin_A,
-                    Z*sin_B - X*cos_A*cos_B - Y*sin_A*cos_B,
-                    -X*cos_A*sin_B - Y*sin_A*sin_B - Z*cos_B + cam.center_position.r.value};
+                            Z*sin_B - X*cos_A*cos_B - Y*sin_A*cos_B,
+                            -X*cos_A*sin_B - Y*sin_A*sin_B - Z*cos_B + cam.center_position.r.value};
 
     //perspective:
     double sin_X = sin(DegreeToRad(cam.orientation.x.value));

@@ -164,7 +164,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
             main_camera.offsets.x += 10;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
-
         case 'R':
             main_camera.dc *= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
@@ -175,10 +174,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
             break;
         case 'F':
             main_camera.center_position.r /= 1.5;
+            main_camera.dc /= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case 'G':
             main_camera.center_position.r *= 1.5;
+            main_camera.dc *= 1.5;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         }
